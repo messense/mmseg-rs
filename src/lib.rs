@@ -8,12 +8,14 @@ static CHARS_DICT: &str = include_str!("chars.dic");
 #[cfg(feature = "embed-dict")]
 static WORDS_DICT: &str = include_str!("words.dic");
 
+#[derive(Debug, Clone)]
 struct Word {
     text: String,
     freq: u32,
     len: u32,
 }
 
+#[derive(Debug)]
 struct Chunk(Vec<Word>);
 
 impl Chunk {
@@ -111,6 +113,60 @@ impl MMSeg {
     }
 
     pub fn cut(&self, text: &str) -> Vec<String> {
-        unimplemented!()
+        let mut pos = 0;
+        let chars: Vec<char> = text.chars().collect();
+        let text_len = chars.len();
+        let mut ret = Vec::new();
+        while pos < text_len {
+            let chr = chars[pos];
+            let token = if is_chinese_char(chr) {
+                get_chinese_words(&chars, &mut pos)
+            } else {
+                get_ascii_words(&chars, &mut pos)
+            };
+            if token.len() > 0 {
+                ret.push(token);
+            }
+        }
+        ret
     }
+}
+
+fn is_chinese_char(chr: char) -> bool {
+    let chr = chr as u32;
+    chr >= 0x4e00 && chr < 0x9fa6
+}
+
+fn get_ascii_words(chars: &[char], pos: &mut usize) -> String {
+    while *pos < chars.len() {
+        let chr = chars[*pos];
+        if chr.is_ascii_alphanumeric() || is_chinese_char(chr) {
+            break;
+        }
+        *pos += 1;
+    }
+    let start = *pos;
+    while *pos < chars.len() {
+        let chr = chars[*pos];
+        if !chr.is_ascii_alphanumeric() {
+            break;
+        }
+        *pos += 1;
+    }
+    let end = *pos;
+
+    // skip Chinese word whitespaces and punctuations
+    while *pos < chars.len() {
+        let chr = chars[*pos];
+        if chr.is_ascii_alphanumeric() || is_chinese_char(chr) {
+            break;
+        }
+        *pos += 1;
+    }
+    // FIXME: avoid allocation
+    chars[start..end].iter().collect()
+}
+
+fn get_chinese_words(chars: &[char], pos: &mut usize) -> String {
+    String::new()
 }
