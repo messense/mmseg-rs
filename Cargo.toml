@@ -1,0 +1,15 @@
+[package]
+name = "mmseg"
+version = "0.1.0"
+authors = ["messense <messense@icloud.com>"]
+description = "Chinese word segmenation algorithm MMSEG in Rust"
+keywords = ["nlp", "chinese", "segmenation"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/messense/mmseg-rs"
+
+[dependencies]
+
+[features]
+default = ["embed-dict"]
+embed-dict = []
