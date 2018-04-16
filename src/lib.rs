@@ -19,6 +19,10 @@ struct Word {
 struct Chunk(Vec<Word>);
 
 impl Chunk {
+    fn new1(word: Word) -> Self {
+        Chunk(vec![word])
+    }
+
     fn total_word_len(&self) -> u32 {
         let mut len = 0;
         for word in &self.0 {
@@ -165,9 +169,42 @@ impl MMSeg {
         String::new()
     }
 
-    fn get_match_chinese_words(&self) -> Vec<Word> {
+    fn get_match_chinese_words(&self, chars: &[char], pos: &mut usize) -> Vec<Word> {
         let mut words = Vec::new();
+        let original_pos = *pos;
+        let mut index = 0;
+        while *pos < chars.len() {
+            if index >= self.max_word_len {
+                break;
+            } else if !is_chinese_char(chars[*pos]) {
+                break;
+            }
+            *pos += 1;
+            index += 1;
+            let text: String = chars[original_pos..*pos].iter().collect();
+            let word = self.words.get(&text).map(|v| {
+                let len = text.chars().count();
+                Word {
+                    text: text,
+                    freq: *v,
+                    len: len as u32,
+                }
+            });
+            if let Some(word) = word {
+                words.push(word);
+            }
+        }
+        *pos = original_pos;
         words
+    }
+
+    fn create_simple_chunks(&self, chars: &[char], pos: &mut usize) -> Vec<Chunk> {
+        let mut chunks = Vec::new();
+        let words = self.get_match_chinese_words(chars, pos);
+        for word in words {
+            chunks.push(Chunk::new1(word));
+        }
+        chunks
     }
 }
 
