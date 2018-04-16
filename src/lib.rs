@@ -120,9 +120,9 @@ impl MMSeg {
         while pos < text_len {
             let chr = chars[pos];
             let token = if is_chinese_char(chr) {
-                get_chinese_words(&chars, &mut pos)
+                self.get_chinese_words(&chars, &mut pos)
             } else {
-                get_ascii_words(&chars, &mut pos)
+                self.get_ascii_words(&chars, &mut pos)
             };
             if token.len() > 0 {
                 ret.push(token);
@@ -130,43 +130,48 @@ impl MMSeg {
         }
         ret
     }
+
+    fn get_ascii_words(&self, chars: &[char], pos: &mut usize) -> String {
+        while *pos < chars.len() {
+            let chr = chars[*pos];
+            if chr.is_ascii_alphanumeric() || is_chinese_char(chr) {
+                break;
+            }
+            *pos += 1;
+        }
+        let start = *pos;
+        while *pos < chars.len() {
+            let chr = chars[*pos];
+            if !chr.is_ascii_alphanumeric() {
+                break;
+            }
+            *pos += 1;
+        }
+        let end = *pos;
+
+        // skip Chinese word whitespaces and punctuations
+        while *pos < chars.len() {
+            let chr = chars[*pos];
+            if chr.is_ascii_alphanumeric() || is_chinese_char(chr) {
+                break;
+            }
+            *pos += 1;
+        }
+        // FIXME: avoid allocation
+        chars[start..end].iter().collect()
+    }
+
+    fn get_chinese_words(&self, chars: &[char], pos: &mut usize) -> String {
+        String::new()
+    }
+
+    fn get_match_chinese_words(&self) -> Vec<Word> {
+        let mut words = Vec::new();
+        words
+    }
 }
 
 fn is_chinese_char(chr: char) -> bool {
     let chr = chr as u32;
     chr >= 0x4e00 && chr < 0x9fa6
-}
-
-fn get_ascii_words(chars: &[char], pos: &mut usize) -> String {
-    while *pos < chars.len() {
-        let chr = chars[*pos];
-        if chr.is_ascii_alphanumeric() || is_chinese_char(chr) {
-            break;
-        }
-        *pos += 1;
-    }
-    let start = *pos;
-    while *pos < chars.len() {
-        let chr = chars[*pos];
-        if !chr.is_ascii_alphanumeric() {
-            break;
-        }
-        *pos += 1;
-    }
-    let end = *pos;
-
-    // skip Chinese word whitespaces and punctuations
-    while *pos < chars.len() {
-        let chr = chars[*pos];
-        if chr.is_ascii_alphanumeric() || is_chinese_char(chr) {
-            break;
-        }
-        *pos += 1;
-    }
-    // FIXME: avoid allocation
-    chars[start..end].iter().collect()
-}
-
-fn get_chinese_words(chars: &[char], pos: &mut usize) -> String {
-    String::new()
 }
