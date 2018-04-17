@@ -1,7 +1,11 @@
+extern crate smallvec;
+
 use std::io::{self, BufRead, BufReader};
 use std::fs::File;
 use std::path::Path;
 use std::collections::HashMap;
+
+use smallvec::SmallVec;
 
 #[cfg(feature = "embed-dict")]
 static CHARS_DICT: &str = include_str!("chars.dic");
@@ -16,22 +20,31 @@ struct Word {
 }
 
 #[derive(Debug)]
-struct Chunk(Vec<Word>);
+struct Chunk(SmallVec<[Word; 3]>);
 
 impl Chunk {
     #[inline]
     fn new1(word: Word) -> Self {
-        Chunk(vec![word])
+        let mut vec = SmallVec::new();
+        vec.push(word);
+        Chunk(vec)
     }
 
     #[inline]
     fn new2(word1: Word, word2: Word) -> Self {
-        Chunk(vec![word1, word2])
+        let mut vec = SmallVec::new();
+        vec.push(word1);
+        vec.push(word2);
+        Chunk(vec)
     }
 
     #[inline]
     fn new3(word1: Word, word2: Word, word3: Word) -> Self {
-        Chunk(vec![word1, word2, word3])
+        let mut vec = SmallVec::new();
+        vec.push(word1);
+        vec.push(word2);
+        vec.push(word3);
+        Chunk(vec)
     }
 
     fn total_word_len(&self) -> u32 {
