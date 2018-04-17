@@ -4,6 +4,7 @@ use std::io::{self, BufRead, BufReader};
 use std::fs::File;
 use std::path::Path;
 use std::collections::HashMap;
+use std::cmp::Ordering;
 
 use smallvec::SmallVec;
 
@@ -152,24 +153,34 @@ impl MMSeg {
     fn cut_internal(&self, text: &str, simple: bool) -> Vec<String> {
         let mut pos = 0;
         let chars: Vec<char> = text.chars().collect();
-        let text_len = chars.len();
         let mut ret = Vec::new();
-        while pos < text_len {
-            let chr = chars[pos];
-            let token = if is_chinese_char(chr) {
-                if simple {
-                    self.get_chinese_words_simple(&chars, &mut pos)
-                } else {
-                    self.get_chinese_words_complex(&chars, &mut pos)
-                }
-            } else {
-                self.get_ascii_words(&chars, &mut pos)
-            };
-            if token.len() > 0 {
+        loop {
+            if let Some(token) = self.get_next_token(&chars, &mut pos, simple) {
                 ret.push(token);
+            } else {
+                break;
             }
         }
         ret
+    }
+
+    fn get_next_token(&self, chars: &[char], pos: &mut usize, simple: bool) -> Option<String> {
+        while *pos < chars.len() {
+            let chr = chars[*pos];
+            let token = if is_chinese_char(chr) {
+                if simple {
+                    self.get_chinese_words_simple(&chars, pos)
+                } else {
+                    self.get_chinese_words_complex(&chars, pos)
+                }
+            } else {
+                self.get_ascii_words(&chars, pos)
+            };
+            if token.len() > 0 {
+                return Some(token);
+            }
+        }
+        None
     }
 
     fn get_ascii_words(&self, chars: &[char], pos: &mut usize) -> String {
@@ -220,6 +231,48 @@ impl MMSeg {
     }
 
     fn get_chinese_words_complex(&self, chars: &[char], pos: &mut usize) -> String {
+        fn take_high_test<F>(chunks: &mut [Chunk], mut compare: F)
+            -> &mut [Chunk]
+            where F: FnMut(&Chunk, &Chunk) -> Ordering {
+            let mut i = 1;
+            for j in 1..chunks.len() {
+                let rlt = compare(&chunks[j], &chunks[0]);
+                if rlt == Ordering::Greater {
+                    i = 0;
+                }
+                if rlt != Ordering::Less {
+                    chunks.swap(i, j);
+                    i += 1;
+                }
+            }
+            &mut chunks[0..i]
+        }
+
+        let mut chunks = self.create_chunks(chars, pos);
+        let mut chunks = take_high_test(&mut chunks, |a, b| {
+            a.total_word_len().cmp(&b.total_word_len())
+        });
+        let mut chunks = take_high_test(&mut chunks, |a, b| {
+            a.avg_word_len().partial_cmp(&b.avg_word_len()).unwrap_or(Ordering::Equal)
+        });
+        let mut chunks = take_high_test(&mut chunks, |a, b| {
+            b.stddev().partial_cmp(&a.stddev()).unwrap_or(Ordering::Equal)
+        });
+        let chunks = take_high_test(&mut chunks, |a, b| {
+            a.word_freq().partial_cmp(&b.word_freq()).unwrap_or(Ordering::Equal)
+        });
+        let result = chunks.get(0);
+        if let Some(chunk) = result {
+            let mut ret = String::new();
+            for word in chunk.0.iter().take(1) {
+                if word.len == 0 {
+                    continue;
+                }
+                *pos += word.len as usize;
+                ret.push_str(&word.text);
+            }
+            return ret;
+        }
         String::new()
     }
 
