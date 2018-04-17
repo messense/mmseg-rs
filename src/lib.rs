@@ -219,7 +219,7 @@ impl MMSeg {
         if let Some(chunk) = result {
             let mut ret = String::new();
             for word in chunk.0 {
-                if word.len == 0 {
+                if word.text.is_empty() {
                     continue;
                 }
                 *pos += word.len as usize;
@@ -249,6 +249,7 @@ impl MMSeg {
         }
 
         let mut chunks = self.create_chunks(chars, pos);
+        println!("chunks: {:#?}", chunks);
         let mut chunks = take_high_test(&mut chunks, |a, b| {
             a.total_word_len().cmp(&b.total_word_len())
         });
@@ -262,10 +263,11 @@ impl MMSeg {
             a.word_freq().partial_cmp(&b.word_freq()).unwrap_or(Ordering::Equal)
         });
         let result = chunks.get(0);
+        println!("{:#?}", result);
         if let Some(chunk) = result {
             let mut ret = String::new();
             for word in chunk.0.iter().take(1) {
-                if word.len == 0 {
+                if word.text.is_empty() {
                     continue;
                 }
                 *pos += word.len as usize;
@@ -303,11 +305,11 @@ impl MMSeg {
         }
         *pos = original_pos;
         if words.is_empty() {
-            // if word not exists , place "" and length 0
+            // if word not exists , place "X" and length 0
             words.push(Word {
                 text: "".to_string(),
                 freq: 0,
-                len: 0,
+                len: 1,
             })
         }
         // println!("words: {:?}", &words);
@@ -318,7 +320,7 @@ impl MMSeg {
         let words = self.get_match_chinese_words(chars, pos);
         let mut chunks = Vec::with_capacity(words.len());
         for word in words {
-            if word.len == 0 {
+            if word.text.is_empty() {
                 continue;
             }
             chunks.push(Chunk::new1(word));
@@ -342,7 +344,7 @@ impl MMSeg {
                     if *pos < text_len {
                         let words3 = self.get_match_chinese_words(chars, pos);
                         for word3 in words3 {
-                            if word3.len == 0 {
+                            if word3.text.is_empty() {
                                 chunks.push(Chunk::new2(word1.clone(), word2.clone()));
                             } else {
                                 chunks.push(Chunk::new3(word1.clone(), word2.clone(), word3));
