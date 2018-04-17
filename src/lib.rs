@@ -19,8 +19,19 @@ struct Word {
 struct Chunk(Vec<Word>);
 
 impl Chunk {
+    #[inline]
     fn new1(word: Word) -> Self {
         Chunk(vec![word])
+    }
+
+    #[inline]
+    fn new2(word1: Word, word2: Word) -> Self {
+        Chunk(vec![word1, word2])
+    }
+
+    #[inline]
+    fn new3(word1: Word, word2: Word, word3: Word) -> Self {
+        Chunk(vec![word1, word2, word3])
     }
 
     fn total_word_len(&self) -> u32 {
@@ -60,6 +71,7 @@ impl Chunk {
 pub struct MMSeg {
     words: HashMap<String, u32>,
     max_word_len: u32,
+    simple: bool,
 }
 
 impl MMSeg {
@@ -67,6 +79,18 @@ impl MMSeg {
         let mut seg = Self {
             words: HashMap::new(),
             max_word_len: 0,
+            simple: false
+        };
+        #[cfg(feature = "embed-dict")]
+        seg.load_embed_dict().unwrap();
+        seg
+    }
+
+    pub fn simple() -> Self {
+        let mut seg = Self {
+            words: HashMap::new(),
+            max_word_len: 0,
+            simple: true
         };
         #[cfg(feature = "embed-dict")]
         seg.load_embed_dict().unwrap();
@@ -86,7 +110,7 @@ impl MMSeg {
             {
                 let parts: Vec<&str> = buf.split(' ').collect();
                 let freq: u32 = parts[0].parse().unwrap();
-                let chr = parts[1].to_string();
+                let chr = parts[1].trim().to_string();
                 let word_len = chr.chars().count() as u32;
                 if word_len > self.max_word_len {
                     self.max_word_len = word_len;
@@ -99,7 +123,7 @@ impl MMSeg {
             {
                 let parts: Vec<&str> = buf.split(' ').collect();
                 let word_len: u32 = parts[0].parse().unwrap();
-                let chr = parts[1].to_string();
+                let chr = parts[1].trim().to_string();
                 if word_len > self.max_word_len {
                     self.max_word_len = word_len;
                 }
@@ -166,6 +190,21 @@ impl MMSeg {
     }
 
     fn get_chinese_words(&self, chars: &[char], pos: &mut usize) -> String {
+        if self.simple {
+            let chunks = self.create_simple_chunks(chars, pos);
+            let result = chunks.into_iter().max_by_key(|chk| chk.total_word_len());
+            if let Some(chunk) = result {
+                let mut ret = String::new();
+                for word in chunk.0 {
+                    if word.len == 0 {
+                        continue;
+                    }
+                    *pos += word.len as usize;
+                    ret.push_str(&word.text);
+                }
+                return ret;
+            }
+        }
         String::new()
     }
 
@@ -195,15 +234,65 @@ impl MMSeg {
             }
         }
         *pos = original_pos;
+        if words.is_empty() {
+            // if word not exists , place "" and length 0
+            words.push(Word {
+                text: "".to_string(),
+                freq: 0,
+                len: 0,
+            })
+        }
+        // println!("words: {:?}", &words);
         words
     }
 
     fn create_simple_chunks(&self, chars: &[char], pos: &mut usize) -> Vec<Chunk> {
         let mut chunks = Vec::new();
+        let original_pos = *pos;
         let words = self.get_match_chinese_words(chars, pos);
         for word in words {
+            let word_len = word.len as usize;
+            *pos += word_len;
             chunks.push(Chunk::new1(word));
+            *pos -= word_len;
         }
+        *pos = original_pos;
+        chunks
+    }
+
+    fn create_chunks(&self, chars: &[char], pos: &mut usize) -> Vec<Chunk> {
+        let mut chunks = Vec::new();
+        let original_pos = *pos;
+        let text_len = chars.len();
+        let words1 = self.get_match_chinese_words(chars, pos);
+        for word1 in words1 {
+            let word1_len = word1.len as usize;
+            *pos += word1_len;
+            if *pos < text_len {
+                let words2 = self.get_match_chinese_words(chars, pos);
+                for word2 in words2 {
+                    let word2_len = word2.len as usize;
+                    *pos += word2_len;
+                    if *pos < text_len {
+                        let words3 = self.get_match_chinese_words(chars, pos);
+                        for word3 in words3 {
+                            if word3.len == 0 {
+                                chunks.push(Chunk::new2(word1.clone(), word2.clone()));
+                            } else {
+                                chunks.push(Chunk::new3(word1.clone(), word2.clone(), word3));
+                            }
+                        }
+                    } else if *pos == text_len {
+                        chunks.push(Chunk::new2(word1.clone(), word2));
+                    }
+                    *pos -= word2_len;
+                }
+            } else if *pos == text_len {
+                chunks.push(Chunk::new1(word1));
+            }
+            *pos -= word1_len;
+        }
+        *pos = original_pos;
         chunks
     }
 }
