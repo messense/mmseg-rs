@@ -84,7 +84,6 @@ impl Chunk {
 pub struct MMSeg {
     words: HashMap<String, u32>,
     max_word_len: u32,
-    simple: bool,
 }
 
 impl MMSeg {
@@ -92,18 +91,6 @@ impl MMSeg {
         let mut seg = Self {
             words: HashMap::new(),
             max_word_len: 0,
-            simple: false
-        };
-        #[cfg(feature = "embed-dict")]
-        seg.load_embed_dict().unwrap();
-        seg
-    }
-
-    pub fn simple() -> Self {
-        let mut seg = Self {
-            words: HashMap::new(),
-            max_word_len: 0,
-            simple: true
         };
         #[cfg(feature = "embed-dict")]
         seg.load_embed_dict().unwrap();
@@ -153,7 +140,16 @@ impl MMSeg {
         self.load_dict(&mut BufReader::new(chars_dict), &mut BufReader::new(words_dict))
     }
 
+    pub fn cut_simple(&self, text: &str) -> Vec<String> {
+        self.cut_internal(text, true)
+    }
+
     pub fn cut(&self, text: &str) -> Vec<String> {
+        self.cut_internal(text, false)
+    }
+
+    #[inline]
+    fn cut_internal(&self, text: &str, simple: bool) -> Vec<String> {
         let mut pos = 0;
         let chars: Vec<char> = text.chars().collect();
         let text_len = chars.len();
@@ -161,7 +157,11 @@ impl MMSeg {
         while pos < text_len {
             let chr = chars[pos];
             let token = if is_chinese_char(chr) {
-                self.get_chinese_words(&chars, &mut pos)
+                if simple {
+                    self.get_chinese_words_simple(&chars, &mut pos)
+                } else {
+                    self.get_chinese_words_complex(&chars, &mut pos)
+                }
             } else {
                 self.get_ascii_words(&chars, &mut pos)
             };
@@ -202,22 +202,24 @@ impl MMSeg {
         chars[start..end].iter().collect()
     }
 
-    fn get_chinese_words(&self, chars: &[char], pos: &mut usize) -> String {
-        if self.simple {
-            let chunks = self.create_simple_chunks(chars, pos);
-            let result = chunks.into_iter().max_by_key(|chk| chk.total_word_len());
-            if let Some(chunk) = result {
-                let mut ret = String::new();
-                for word in chunk.0 {
-                    if word.len == 0 {
-                        continue;
-                    }
-                    *pos += word.len as usize;
-                    ret.push_str(&word.text);
+    fn get_chinese_words_simple(&self, chars: &[char], pos: &mut usize) -> String {
+        let chunks = self.create_simple_chunks(chars, pos);
+        let result = chunks.into_iter().max_by_key(|chk| chk.total_word_len());
+        if let Some(chunk) = result {
+            let mut ret = String::new();
+            for word in chunk.0 {
+                if word.len == 0 {
+                    continue;
                 }
-                return ret;
+                *pos += word.len as usize;
+                ret.push_str(&word.text);
             }
+            return ret;
         }
+        String::new()
+    }
+
+    fn get_chinese_words_complex(&self, chars: &[char], pos: &mut usize) -> String {
         String::new()
     }
 
