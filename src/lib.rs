@@ -249,7 +249,6 @@ impl MMSeg {
         }
 
         let mut chunks = self.create_chunks(chars, pos);
-        println!("chunks: {:#?}", chunks);
         let mut chunks = take_high_test(&mut chunks, |a, b| {
             a.total_word_len().cmp(&b.total_word_len())
         });
@@ -263,7 +262,6 @@ impl MMSeg {
             a.word_freq().partial_cmp(&b.word_freq()).unwrap_or(Ordering::Equal)
         });
         let result = chunks.get(0);
-        println!("{:#?}", result);
         if let Some(chunk) = result {
             let mut ret = String::new();
             for word in chunk.0.iter().take(1) {
@@ -312,7 +310,6 @@ impl MMSeg {
                 len: 1,
             })
         }
-        // println!("words: {:?}", &words);
         words
     }
 
