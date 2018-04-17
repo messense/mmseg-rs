@@ -247,16 +247,14 @@ impl MMSeg {
     }
 
     fn create_simple_chunks(&self, chars: &[char], pos: &mut usize) -> Vec<Chunk> {
-        let mut chunks = Vec::new();
-        let original_pos = *pos;
         let words = self.get_match_chinese_words(chars, pos);
+        let mut chunks = Vec::with_capacity(words.len());
         for word in words {
-            let word_len = word.len as usize;
-            *pos += word_len;
+            if word.len == 0 {
+                continue;
+            }
             chunks.push(Chunk::new1(word));
-            *pos -= word_len;
         }
-        *pos = original_pos;
         chunks
     }
 
