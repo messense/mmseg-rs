@@ -1,4 +1,4 @@
-extern crate smallvec;
+extern crate arrayvec;
 
 use std::io::{self, BufRead, BufReader};
 use std::fs::File;
@@ -6,7 +6,7 @@ use std::path::Path;
 use std::collections::HashMap;
 use std::cmp::Ordering;
 
-use smallvec::SmallVec;
+use arrayvec::ArrayVec;
 
 #[cfg(feature = "embed-dict")]
 static CHARS_DICT: &str = include_str!("chars.dic");
@@ -21,30 +21,34 @@ struct Word {
 }
 
 #[derive(Debug)]
-struct Chunk(SmallVec<[Word; 3]>);
+struct Chunk(ArrayVec<[Word; 3]>);
 
 impl Chunk {
     #[inline]
     fn new1(word: Word) -> Self {
-        let mut vec = SmallVec::new();
-        vec.push(word);
+        let mut vec = ArrayVec::new();
+        unsafe { vec.push_unchecked(word) };
         Chunk(vec)
     }
 
     #[inline]
     fn new2(word1: Word, word2: Word) -> Self {
-        let mut vec = SmallVec::new();
-        vec.push(word1);
-        vec.push(word2);
+        let mut vec = ArrayVec::new();
+        unsafe {
+            vec.push_unchecked(word1);
+            vec.push_unchecked(word2);
+        }
         Chunk(vec)
     }
 
     #[inline]
     fn new3(word1: Word, word2: Word, word3: Word) -> Self {
-        let mut vec = SmallVec::new();
-        vec.push(word1);
-        vec.push(word2);
-        vec.push(word3);
+        let mut vec = ArrayVec::new();
+        unsafe {
+            vec.push_unchecked(word1);
+            vec.push_unchecked(word2);
+            vec.push_unchecked(word3);
+        }
         Chunk(vec)
     }
 
