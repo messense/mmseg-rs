@@ -1,6 +1,6 @@
 [package]
 name = "mmseg"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["messense <messense@icloud.com>"]
 description = "Chinese word segmenation algorithm MMSEG in Rust"
 edition = "2018"
