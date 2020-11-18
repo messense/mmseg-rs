@@ -1,10 +1,10 @@
 extern crate arrayvec;
 
-use std::io::{self, BufRead, BufReader};
-use std::fs::File;
-use std::path::Path;
-use std::collections::HashMap;
 use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{self, BufRead, BufReader};
+use std::path::Path;
 
 use arrayvec::ArrayVec;
 
@@ -109,7 +109,11 @@ impl MMSeg {
         self.load_dict(&mut chars_dict, &mut words_dict)
     }
 
-    pub fn load_dict<R: BufRead>(&mut self, chars_dict: &mut R, words_dict: &mut R) -> io::Result<()> {
+    pub fn load_dict<R: BufRead>(
+        &mut self,
+        chars_dict: &mut R,
+        words_dict: &mut R,
+    ) -> io::Result<()> {
         let mut buf = String::new();
         while chars_dict.read_line(&mut buf)? > 0 {
             {
@@ -139,10 +143,17 @@ impl MMSeg {
         Ok(())
     }
 
-    pub fn load_dict_file<P: AsRef<Path>>(&mut self, chars_dict: P, words_dict: P) -> io::Result<()> {
+    pub fn load_dict_file<P: AsRef<Path>>(
+        &mut self,
+        chars_dict: P,
+        words_dict: P,
+    ) -> io::Result<()> {
         let chars_dict = File::open(chars_dict.as_ref())?;
         let words_dict = File::open(words_dict.as_ref())?;
-        self.load_dict(&mut BufReader::new(chars_dict), &mut BufReader::new(words_dict))
+        self.load_dict(
+            &mut BufReader::new(chars_dict),
+            &mut BufReader::new(words_dict),
+        )
     }
 
     pub fn cut_simple(&self, text: &str) -> Vec<String> {
@@ -235,9 +246,10 @@ impl MMSeg {
     }
 
     fn get_chinese_words_complex(&self, chars: &[char], pos: &mut usize) -> String {
-        fn take_high_test<F>(chunks: &mut [Chunk], mut compare: F)
-            -> &mut [Chunk]
-            where F: FnMut(&Chunk, &Chunk) -> Ordering {
+        fn take_high_test<F>(chunks: &mut [Chunk], mut compare: F) -> &mut [Chunk]
+        where
+            F: FnMut(&Chunk, &Chunk) -> Ordering,
+        {
             let mut i = 1;
             for j in 1..chunks.len() {
                 let rlt = compare(&chunks[j], &chunks[0]);
@@ -257,13 +269,19 @@ impl MMSeg {
             a.total_word_len().cmp(&b.total_word_len())
         });
         let mut chunks = take_high_test(&mut chunks, |a, b| {
-            a.avg_word_len().partial_cmp(&b.avg_word_len()).unwrap_or(Ordering::Equal)
+            a.avg_word_len()
+                .partial_cmp(&b.avg_word_len())
+                .unwrap_or(Ordering::Equal)
         });
         let mut chunks = take_high_test(&mut chunks, |a, b| {
-            b.stddev().partial_cmp(&a.stddev()).unwrap_or(Ordering::Equal)
+            b.stddev()
+                .partial_cmp(&a.stddev())
+                .unwrap_or(Ordering::Equal)
         });
         let chunks = take_high_test(&mut chunks, |a, b| {
-            a.word_freq().partial_cmp(&b.word_freq()).unwrap_or(Ordering::Equal)
+            a.word_freq()
+                .partial_cmp(&b.word_freq())
+                .unwrap_or(Ordering::Equal)
         });
         let result = chunks.get(0);
         if let Some(chunk) = result {

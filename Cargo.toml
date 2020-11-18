@@ -9,7 +9,7 @@ readme = "README.md"
 repository = "https://github.com/messense/mmseg-rs"
 
 [dependencies]
-arrayvec = "0.4"
+arrayvec = "0.5"
 
 [features]
 default = ["embed-dict"]
