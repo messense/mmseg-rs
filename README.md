@@ -11,10 +11,8 @@ Add it to your ``Cargo.toml``:
 
 ```toml
 [dependencies]
-mmseg = "0.1"
+mmseg = "0.2"
 ```
-
-Add ``extern crate mmseg`` to your crate root and your're good to go!
 
 ## License
 
