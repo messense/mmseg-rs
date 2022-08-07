@@ -19,7 +19,7 @@ struct Word {
 }
 
 #[derive(Debug)]
-struct Chunk(ArrayVec<[Word; 3]>);
+struct Chunk(ArrayVec<Word, 3>);
 
 impl Chunk {
     #[inline]
