@@ -11,7 +11,7 @@ Add it to your ``Cargo.toml``:
 
 ```toml
 [dependencies]
-mmseg = "0.2"
+mmseg = "0.3"
 ```
 
 ## License
